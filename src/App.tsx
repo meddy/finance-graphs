@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import Papa, { ParseResult } from "papaparse";
-import { Line } from "react-chartjs-2";
+import Papa from "papaparse";
 import dayjs, { Dayjs } from "dayjs";
+import SpendingOvertime from "./SpendingOverTime";
 
 enum TransactionType {
   credit = "credit",
@@ -20,7 +20,7 @@ interface ParsedRow {
   Notes: string;
 }
 
-interface DataRow {
+export interface DataRow {
   date: Dayjs;
   paymentMethod: string;
   description: string;
@@ -30,14 +30,20 @@ interface DataRow {
   accountName: string;
 }
 
-type AmountTuple = [string, number];
+export type AmountTuple = [string, number];
 
-function App() {
+export default function App() {
   const [data, setData] = useState<DataRow[]>([]);
 
   const spending = data
-    .filter((row) => (row.transactionType = TransactionType.debit))
-    .reduce<Array<[string, number]>>((acc, row) => {
+    .filter((row) => {
+      return (
+        row.transactionType === TransactionType.debit &&
+        row.description !== "Wealthfront Inc." &&
+        row.description !== "Vanguard"
+      );
+    })
+    .reduce<AmountTuple[]>((acc, row) => {
       const monthAmount: AmountTuple = [
         row.date.format("MMM YYYY"),
         row.amount,
@@ -54,29 +60,42 @@ function App() {
       return acc;
     }, []);
 
-  const config = {
-    labels: spending.map((monthAmount) => monthAmount[0]),
-    datasets: [
-      {
-        label: "Spending",
-        data: spending.map((monthAmount) => monthAmount[1]),
-        fill: false,
-        backgroundColor: "rgb(255, 99, 132)",
-        borderColor: "rgba(255, 99, 132, 0.2)",
-      },
-    ],
-  };
+  const onUpload = (file: File) => {
+    const data: DataRow[] = [];
+    Papa.parse(file, {
+      header: true,
+      step: (result, parser) => {
+        const resultData = result.data as unknown as ParsedRow;
+        if (result.errors.length) {
+          console.error("Failed to parse row.", result.errors);
+          return;
+        }
 
-  const options = {
-    scales: {
-      yAxes: [
-        {
-          ticks: {
-            beginAtZero: true,
-          },
-        },
-      ],
-    },
+        data.push({
+          date: dayjs(resultData.Date),
+          paymentMethod: resultData["Account Name"],
+          description: resultData.Description,
+          amount: Number(resultData.Amount),
+          transactionType: resultData["Transaction Type"],
+          category: resultData.Category,
+          accountName: resultData["Account Name"],
+        });
+      },
+      complete: () => {
+        setData(
+          data.sort((rowA, rowB) => {
+            if (rowA.date.isBefore(rowB.date)) {
+              return -1;
+            }
+            if (rowA.date.isAfter(rowB.date)) {
+              return 1;
+            }
+
+            return 0;
+          })
+        );
+      },
+    });
   };
 
   return (
@@ -89,47 +108,10 @@ function App() {
           if (!(event.currentTarget.files && event.currentTarget.files[0])) {
             return;
           }
-
-          const data: DataRow[] = [];
-          Papa.parse(event.currentTarget.files[0], {
-            header: true,
-            step: (result, parser) => {
-              const resultData = result.data as unknown as ParsedRow;
-              if (result.errors.length) {
-                console.error("Failed to parse row.", result.errors);
-                return;
-              }
-
-              data.push({
-                date: dayjs(resultData.Date),
-                paymentMethod: resultData["Account Name"],
-                description: resultData.Description,
-                amount: Number(resultData.Amount),
-                transactionType: resultData["Transaction Type"],
-                category: resultData.Category,
-                accountName: resultData["Account Name"],
-              });
-            },
-            complete: () => {
-              setData(
-                data.sort((rowA, rowB) => {
-                  if (rowA.date.isBefore(rowB.date)) {
-                    return -1;
-                  }
-                  if (rowA.date.isAfter(rowB.date)) {
-                    return 1;
-                  }
-
-                  return 0;
-                })
-              );
-            },
-          });
+          onUpload(event.currentTarget.files[0]);
         }}
       />
-      <Line data={config} options={options} />
+      <SpendingOvertime data={spending} />
     </div>
   );
 }
-
-export default App;
