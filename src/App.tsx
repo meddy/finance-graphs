@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Papa from "papaparse";
 import dayjs, { Dayjs } from "dayjs";
 import SpendingOvertime from "./SpendingOverTime";
+import TransactionList from "./TransactionList";
 
 enum TransactionType {
   credit = "credit",
@@ -34,31 +35,13 @@ export type AmountTuple = [string, number];
 
 export default function App() {
   const [data, setData] = useState<DataRow[]>([]);
-
-  const spending = data
-    .filter((row) => {
-      return (
-        row.transactionType === TransactionType.debit &&
-        row.description !== "Wealthfront Inc." &&
-        row.description !== "Vanguard"
-      );
-    })
-    .reduce<AmountTuple[]>((acc, row) => {
-      const monthAmount: AmountTuple = [
-        row.date.format("MMM YYYY"),
-        row.amount,
-      ];
-      for (const totalAmount of acc) {
-        if (totalAmount[0] === monthAmount[0]) {
-          totalAmount[1] += monthAmount[1];
-          return acc;
-        }
-      }
-
-      acc.push(monthAmount);
-
-      return acc;
-    }, []);
+  const dataFiltered = data.filter((row) => {
+    return (
+      row.transactionType === TransactionType.debit &&
+      row.description !== "Wealthfront Inc." &&
+      row.description !== "Vanguard"
+    );
+  });
 
   const onUpload = (file: File) => {
     const data: DataRow[] = [];
@@ -111,7 +94,8 @@ export default function App() {
           onUpload(event.currentTarget.files[0]);
         }}
       />
-      <SpendingOvertime data={spending} />
+      <SpendingOvertime data={dataFiltered} />
+      <TransactionList data={dataFiltered} />
     </div>
   );
 }

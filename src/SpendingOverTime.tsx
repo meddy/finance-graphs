@@ -1,13 +1,26 @@
-import React from "react";
 import { Line } from "react-chartjs-2";
-import { AmountTuple } from "./App";
+import { AmountTuple, DataRow } from "./App";
 
 interface SpendingOverTimeProps {
-  data: AmountTuple[];
+  data: DataRow[];
 }
 
 export default function SpendingOvertime(props: SpendingOverTimeProps) {
-  const spending = props.data;
+  const { data } = props;
+  const spending = data.reduce<AmountTuple[]>((acc, row) => {
+    const monthAmount: AmountTuple = [row.date.format("MMM YYYY"), row.amount];
+    for (const totalAmount of acc) {
+      if (totalAmount[0] === monthAmount[0]) {
+        totalAmount[1] += monthAmount[1];
+        return acc;
+      }
+    }
+
+    acc.push(monthAmount);
+
+    return acc;
+  }, []);
+
   return (
     <Line
       data={{
