@@ -1,14 +1,22 @@
+import { memo } from "react";
 import { Line } from "react-chartjs-2";
-import { AmountTuple, DataRow } from "./App";
+import { Amount, DataRow } from "./App";
+import dayjs, { Dayjs } from "dayjs";
 
 interface SpendingOverTimeProps {
   data: DataRow[];
+  onDateClick: (date?: Dayjs) => void;
 }
 
-export default function SpendingOvertime(props: SpendingOverTimeProps) {
-  const { data } = props;
-  const spending = data.reduce<AmountTuple[]>((acc, row) => {
-    const monthAmount: AmountTuple = [row.date.format("MMM YYYY"), row.amount];
+interface EventElement {
+  datasetIndex: number;
+  index: number;
+}
+
+const SpendingOvertime = (props: SpendingOverTimeProps) => {
+  const { data, onDateClick } = props;
+  const spending = data.reduce<Amount[]>((acc, row) => {
+    const monthAmount: Amount = [row.date.format("MMM YYYY"), row.amount];
     for (const totalAmount of acc) {
       if (totalAmount[0] === monthAmount[0]) {
         totalAmount[1] += monthAmount[1];
@@ -46,6 +54,17 @@ export default function SpendingOvertime(props: SpendingOverTimeProps) {
           ],
         },
       }}
+      getElementAtEvent={(element) => {
+        if (!element[0]) {
+          onDateClick();
+          return;
+        }
+
+        const amount = spending[(element[0] as EventElement).index];
+        onDateClick(dayjs(amount[0]));
+      }}
     />
   );
-}
+};
+
+export default memo(SpendingOvertime);

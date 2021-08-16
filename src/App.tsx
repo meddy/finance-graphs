@@ -31,10 +31,12 @@ export interface DataRow {
   accountName: string;
 }
 
-export type AmountTuple = [string, number];
+export type Amount = [string, number];
 
 export default function App() {
   const [data, setData] = useState<DataRow[]>([]);
+  const [date, setDate] = useState<Dayjs>();
+
   const dataFiltered = data.filter((row) => {
     return (
       row.transactionType === TransactionType.debit &&
@@ -94,8 +96,13 @@ export default function App() {
           onUpload(event.currentTarget.files[0]);
         }}
       />
-      <SpendingOvertime data={dataFiltered} />
-      <TransactionList data={dataFiltered} />
+      <SpendingOvertime
+        data={dataFiltered}
+        onDateClick={(date) => {
+          setDate(date);
+        }}
+      />
+      <TransactionList data={dataFiltered} date={date} />
     </div>
   );
 }

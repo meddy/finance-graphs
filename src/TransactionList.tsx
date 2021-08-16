@@ -1,4 +1,4 @@
-import { AmountTuple, DataRow } from "./App";
+import { Amount, DataRow } from "./App";
 import { Dayjs } from "dayjs";
 
 interface TransactionListProps {
@@ -9,22 +9,21 @@ interface TransactionListProps {
 export default function TransactionList(props: TransactionListProps) {
   const { data, date } = props;
   const transactions = data
-    .reduce<AmountTuple[]>((acc, row) => {
-      for (const amountTuple of acc) {
+    .reduce<Amount[]>((acc, row) => {
+      for (const amount of acc) {
         if (date && !row.date.isSame(date, "month")) {
-          continue;
+          return acc;
         }
-        if (row.description === amountTuple[0]) {
-          amountTuple[1] += row.amount;
+
+        if (row.description === amount[0]) {
+          amount[1] += row.amount;
           return acc;
         }
       }
 
-      acc.push([row.description, row.amount]);
-
-      return acc;
+      return acc.concat([[row.description, row.amount]]);
     }, [])
-    .sort((amountTupleA, amountTupleB) => amountTupleB[1] - amountTupleA[1]);
+    .sort((amountA, amountB) => amountB[1] - amountA[1]);
 
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
