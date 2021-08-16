@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Papa from "papaparse";
 import dayjs, { Dayjs } from "dayjs";
 import SpendingOvertime from "./SpendingOverTime";
@@ -37,13 +37,16 @@ export default function App() {
   const [data, setData] = useState<DataRow[]>([]);
   const [date, setDate] = useState<Dayjs>();
 
-  const dataFiltered = data.filter((row) => {
-    return (
-      row.transactionType === TransactionType.debit &&
-      row.description !== "Wealthfront Inc." &&
-      row.description !== "Vanguard"
-    );
-  });
+  const dataFiltered = useMemo(
+    () =>
+      data.filter(
+        (row) =>
+          row.transactionType === TransactionType.debit &&
+          row.description !== "Wealthfront Inc." &&
+          row.description !== "Vanguard"
+      ),
+    [data]
+  );
 
   const onUpload = (file: File) => {
     const data: DataRow[] = [];
@@ -83,6 +86,10 @@ export default function App() {
     });
   };
 
+  const onDateClick = useCallback((date) => {
+    setDate(date);
+  }, []);
+
   return (
     <div className="container mx-auto p-8">
       <input
@@ -96,12 +103,7 @@ export default function App() {
           onUpload(event.currentTarget.files[0]);
         }}
       />
-      <SpendingOvertime
-        data={dataFiltered}
-        onDateClick={(date) => {
-          setDate(date);
-        }}
-      />
+      <SpendingOvertime data={dataFiltered} onDateClick={onDateClick} />
       <TransactionList data={dataFiltered} date={date} />
     </div>
   );
